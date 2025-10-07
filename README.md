@@ -7,8 +7,10 @@ POC to stream influxDB data into sound using ToneJS library
 Add the necessary environment variables in a `.env` file:
 
 ```env
-VITE_INFLUXDB_URL=your_influxdb_url
-VITE_INFLUXDB_TOKEN=your_influxdb_token
+VITE_INFLUX_URL=https://url.influxdata.com
+VITE_INFLUX_TOKEN=YOUR_API_TOKEN
+VITE_INFLUX_ORG=YOUR_ORG
+VITE_INFLUX_BUCKET=YOUR_BUCKET
 ```
 
 Then, follow these steps:
