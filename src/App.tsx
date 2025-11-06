@@ -139,8 +139,8 @@ function App() {
             <div className="section-title">🗒 Tests</div>
             <div className="button-group">
               <button onClick={playTone}>Tonejs</button>
-              <button onClick={stream}>stream results</button>
-              <button onClick={query}>query</button>
+              <button onClick={stream}>Stream influx</button>
+              <button onClick={query}>Query influx</button>
             </div>
           </div>
           <div className="section-container">
