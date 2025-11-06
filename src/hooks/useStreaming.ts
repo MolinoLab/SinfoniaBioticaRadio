@@ -3,6 +3,7 @@ import { useConsole } from '../contexts/ConsoleContext'
 import { streamFields } from '../libs/radio'
 import { useInfluxDB } from '../contexts/InfluxDBContext'
 import { useFieldSelection } from '../contexts/FieldSelectionContext'
+import { playInfluxFields } from '../libs/tone'
 
 export function useStreaming() {
   const influxClient = useInfluxDB()
@@ -31,12 +32,8 @@ export function useStreaming() {
       const res = await streamFields(influxClient, selectedFields, {
         start: startAgo,
         onRow: (rowsFieldValues, row) => {
-          const debug = Object.entries(rowsFieldValues).map(([key, value]) => {
-            return `${key}: ${value}`
-          })
-          const rowData = `${new Date(row._time).toLocaleTimeString()}:\n${debug.join('\n')}`
-          console.log(rowData)
-          // console.log('AAAA', rowsFieldValues, row)
+          console.log(new Date(row._time).toLocaleTimeString(), rowsFieldValues)
+          playInfluxFields(rowsFieldValues)
         },
         shouldStop: () => stopSignalRef.current,
       })
