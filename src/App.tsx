@@ -1,284 +1,46 @@
 import './App.css'
-import { playTone } from './libs/tone'
-import InfluxDBClient from './libs/influxDbClient'
-import { streamFields } from './libs/radio'
-import { useState, useEffect, useRef } from 'react'
-import { useConsole } from './contexts/ConsoleContext'
+import { useFieldSelection } from './contexts/FieldSelectionContext'
+import { ErrorDisplay } from './components/ErrorDisplay'
+import { RadioPlayer } from './components/RadioPlayer'
+import { TestPanel } from './components/TestPanel'
+import { SchemaExplorer } from './components/SchemaExplorer'
+import { TimeRangeConfig } from './components/TimeRangeConfig'
+import { FieldSelector } from './components/FieldSelector'
 import { ConsoleOutput } from './components/ConsoleOutput'
 
 function App() {
-  // Console context
-  const { addConsoleOutput } = useConsole()
-
-  // State management
-  const [startAgo, setStartAgo] = useState('-720h')
-  const [fieldKeys, setFieldKeys] = useState<string[]>([])
-  const [selectedFields, setSelectedFields] = useState<string[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isStreaming, setIsStreaming] = useState(false)
-
-  // Ref for stop signal (avoids re-renders)
-  const stopSignalRef = useRef(false)
-  // Initialize the client
-  const influxClient = new InfluxDBClient({
-    url: import.meta.env.INFLUX_URL,
-    token: import.meta.env.INFLUX_TOKEN,
-    org: import.meta.env.INFLUX_ORG,
-    bucket: import.meta.env.INFLUX_BUCKET,
-    timeout: 10000, // optional
-  })
-
-  // Load field keys on component mount
-  useEffect(() => {
-    const loadFieldKeys = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-        const fields = await influxClient.getFieldKeys({ start: startAgo })
-
-        if (fields.length === 0) {
-          setError('No fields found in the database. Please check your InfluxDB connection and data.')
-          setFieldKeys([])
-        } else {
-          setFieldKeys(fields)
-          // Select all fields by default
-          setSelectedFields(fields)
-        }
-      } catch (err) {
-        setError(`Failed to load field keys: ${err instanceof Error ? err.message : String(err)}`)
-        setFieldKeys([])
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    loadFieldKeys()
-  }, []) // Only run once on mount
-
-  const stream = async () => {
-    try {
-      addConsoleOutput('Streaming results from InfluxDB...', 'info')
-      let rowCount = 0
-      await influxClient.queryStream(`from(bucket: $bucket) |> range(start: ${startAgo})`, (row) => {
-        rowCount++
-        console.log('Row:', row)
-      })
-      addConsoleOutput(`Stream completed. Received ${rowCount} rows.`, 'success')
-    } catch (err) {
-      addConsoleOutput(`Stream failed: ${err instanceof Error ? err.message : String(err)}`, 'error')
-    }
-  }
-
-  const query = async () => {
-    try {
-      addConsoleOutput('Querying InfluxDB...', 'info')
-      const results = await influxClient.query(`
-  from(bucket: $bucket)
-    |> range(start: ${startAgo})
-`)
-      // |> filter(fn: (r) => r._measurement == "temperature")
-      console.log(results)
-      addConsoleOutput(`Query completed. Found ${results.length} results.`, 'success')
-      addConsoleOutput(JSON.stringify(results.slice(0, 3), null, 2), 'info') // Show first 3 results
-    } catch (err) {
-      addConsoleOutput(`Query failed: ${err instanceof Error ? err.message : String(err)}`, 'error')
-    }
-  }
-
-  const getInfluxSchemaAndTypes = async () => {
-    try {
-      addConsoleOutput('Fetching InfluxDB schema and types...', 'info')
-      const schema = await influxClient.getInfluxSchemaAndTypes({ start: startAgo })
-      console.log('schema:', schema)
-      addConsoleOutput('Schema retrieved successfully:', 'success')
-      addConsoleOutput(JSON.stringify(schema, null, 2), 'info')
-    } catch (err) {
-      addConsoleOutput(`Failed to get schema: ${err instanceof Error ? err.message : String(err)}`, 'error')
-    }
-  }
-
-  const getFieldKeys = async () => {
-    try {
-      addConsoleOutput('Fetching field keys...', 'info')
-      const schema = await influxClient.getFieldKeys()
-      console.log('getFieldKeys:', schema)
-      addConsoleOutput('Field keys retrieved successfully:', 'success')
-      addConsoleOutput(`Fields: ${schema.join(', ')}`, 'info')
-    } catch (err) {
-      addConsoleOutput(`Failed to get field keys: ${err instanceof Error ? err.message : String(err)}`, 'error')
-    }
-  }
-
-  const _streamMeasurements = async () => {
-    try {
-      setError(null)
-
-      if (selectedFields.length === 0) {
-        setError('Please select at least one field to stream measurements.')
-        addConsoleOutput('Cannot stream: No fields selected', 'error')
-        return
-      }
-
-      // Reset stop signal and start streaming
-      stopSignalRef.current = false
-      setIsStreaming(true)
-
-      addConsoleOutput(`Starting stream for ${selectedFields.length} fields: ${selectedFields.join(', ')}`, 'info')
-      console.log(`Streaming ${selectedFields.length} selected fields:`, selectedFields)
-
-      const res = await streamFields(influxClient, selectedFields, {
-        start: startAgo,
-        onRow: (field, row) => {
-          // Display each row in console as it arrives
-          const rowData = `${field}: ${row._value} (${new Date(row._time).toLocaleTimeString()})`
-          console.log(rowData)
-        },
-        shouldStop: () => stopSignalRef.current,
-      })
-
-      console.log('Stream result:', res)
-
-      // Log final summary
-      const wasStopped = stopSignalRef.current
-      if (wasStopped) {
-        addConsoleOutput(`Stream stopped by user. Processed ${res.totalRows} rows.`, 'info')
-      } else {
-        addConsoleOutput(`Stream completed. Total rows: ${res.totalRows}`, 'success')
-      }
-
-      // Show breakdown by field
-      for (const field in res.rowsByField) {
-        if (res.rowsByField[field] > 0) {
-          addConsoleOutput(`  ${field}: ${res.rowsByField[field]} rows`, 'info')
-        }
-      }
-    } catch (err) {
-      const errorMsg = `Failed to stream measurements: ${err instanceof Error ? err.message : String(err)}`
-      setError(errorMsg)
-      addConsoleOutput(errorMsg, 'error')
-    } finally {
-      setIsStreaming(false)
-    }
-  }
-
-  const stopStreaming = () => {
-    stopSignalRef.current = true
-    addConsoleOutput('Stopping stream...', 'info')
-  }
-
-  // Helper functions for checkbox selection
-  const handleFieldToggle = (field: string) => {
-    setSelectedFields((prev) =>
-      prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field],
-    )
-  }
-
-  const handleSelectAll = () => {
-    setSelectedFields(fieldKeys)
-  }
-
-  const handleDeselectAll = () => {
-    setSelectedFields([])
-  }
-
+  const { error, isLoading } = useFieldSelection()
 
   return (
-    <div className="app-container">
+    <div className='app-container'>
       {/* Error Display */}
-      {error && (
-        <div className="error-container">
-          <strong>Error:</strong> {error}
-        </div>
-      )}
+      <ErrorDisplay error={error} />
 
       {/* Loading Indicator */}
-      {isLoading && (
-        <div className="info-container">
-          Loading field keys...
-        </div>
-      )}
+      {isLoading && <div className='info-container'>Loading field keys...</div>}
 
       {/* Two Column Layout */}
-      <div className="two-column-layout">
+      <div className='two-column-layout'>
         {/* Left Column - Main Actions */}
-        <div className="left-column">
+        <div className='left-column'>
           {/* Main Action Section */}
-          <div className="section-container">
-            <div className="section-title">📻 Radio sinfonia biotica</div>
-            <button
-              onClick={isStreaming ? stopStreaming : _streamMeasurements}
-              disabled={!isStreaming && selectedFields.length === 0}
-            >
-              {isStreaming ? '⏹️ Stop Stream' : '▶️ Stream fields'}
-            </button>
-          </div>
-          <div className="section-container">
-            <div className="section-title">🗒 Tests</div>
-            <div className="button-group">
-              <button onClick={playTone}>Tonejs</button>
-              <button onClick={stream}>Stream influx</button>
-              <button onClick={query}>Query influx</button>
-            </div>
-          </div>
-          <div className="section-container">
-            <div className="section-title">🔎 Explore influxDb schema</div>
-            <div className="button-group">
-              <button onClick={getInfluxSchemaAndTypes}>Get schema and types</button>
-              <button onClick={getFieldKeys}>Get field keys</button>
-            </div>
-          </div>
+          <RadioPlayer />
+
+          {/* Test Panels */}
+          <TestPanel />
+          <SchemaExplorer />
 
           {/* Console Output Section */}
           <ConsoleOutput />
         </div>
 
         {/* Right Column - Configuration */}
-        <div className="right-column">
-          {/* START_AGO Input Section */}
-          <div className="section-container">
-            <div className="section-title">⏱️ Time Range Configuration</div>
-            <div className="input-group">
-              <label htmlFor="start-ago">Time Range (start for all queries):</label>
-              <input
-                id="start-ago"
-                type="text"
-                value={startAgo}
-                onChange={(e) => setStartAgo(e.target.value)}
-                placeholder="-720h"
-              />
-              <div className="input-explanation">
-                Specify how far back to query data. Examples: -1h (last hour), -24h (last day), -7d (last week), -30d
-                (last month)
-              </div>
-            </div>
-          </div>
+        <div className='right-column'>
+          {/* Time Range Configuration */}
+          <TimeRangeConfig />
 
           {/* Field Selection Section */}
-          {!isLoading && fieldKeys.length > 0 && (
-            <div className="section-container">
-              <div className="section-title">
-                🔘 Field Selection ({selectedFields.length}/{fieldKeys.length} selected)
-              </div>
-              <label>Select which fields should be queried by radio sinfonia biotica</label>
-              <div className="button-group">
-                <button onClick={handleSelectAll}>Select All</button>
-                <button onClick={handleDeselectAll}>Deselect All</button>
-              </div>
-              <div className="checkbox-container">
-                {fieldKeys.map((field) => (
-                  <label key={field} className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={selectedFields.includes(field)}
-                      onChange={() => handleFieldToggle(field)}
-                    />
-                    {field}
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
+          <FieldSelector />
         </div>
       </div>
     </div>
@@ -286,121 +48,3 @@ function App() {
 }
 
 export default App
-
-/**
- * Sample data by time blocks with adaptive reference time lookup
- * @param influxClient - Client of influxDB
- * @param measurements - Array of measurement names to query
- * @param options - Configuration options
- * @returns Structured sample data for each measurement
- */
-// const sampleDataByTimeBlocks = async (
-//   influxClient: InfluxDBClient,
-//   measurements: string[],
-//   options?: {
-//     intervalMinutes?: number // Sampling interval (default: 1 minute)
-//     lookbackHours?: number // How far back to look for data (default: 1 hour)
-//     fields?: string[] // Optional field filter
-//   }
-// ) => {
-//   const intervalMinutes = options?.intervalMinutes || 1
-//   const lookbackHours = options?.lookbackHours || 1
-//   const fields = options?.fields
-//
-//   // Calculate current hour as reference (e.g., 15:00 if now is 15:37)
-//   const now = new Date()
-//   const currentHour = new Date(now)
-//   currentHour.setMinutes(0, 0, 0)
-//
-//   const results: Record<
-//     string,
-//     {
-//       referenceTime: Date | null
-//       samples: Array<{
-//         time: string
-//         field: string
-//         value: number | string | boolean
-//       }>
-//     }
-//   > = {}
-//
-//   console.log(`Sampling ${measurements.length} measurements with ${intervalMinutes}min intervals`)
-//
-//   for (const measurement of measurements) {
-//     console.log(`\nProcessing measurement: ${measurement}`)
-//
-//     // Step 1: Find the reference time by looking back for first available data at the reference hour
-//     let referenceTime: Date | null = null
-//     const lookbackLimit = 30 // days to search back for reference
-//
-//     // Build query to find first data at reference hour going backwards
-//     const hourMinute = currentHour.toISOString().substring(11, 16) // e.g., "15:00"
-//
-//     // Query backwards to find first occurrence of the reference hour
-//     const referenceQuery = `
-//         from(bucket: $bucket)
-//           |> range(start: -${lookbackLimit}d)
-//           |> filter(fn: (r) => r._measurement == "${measurement}")
-//           ${fields ? `|> filter(fn: (r) => ${fields.map((f) => `r._field == "${f}"`).join(' or ')})` : ''}
-//           |> filter(fn: (r) => strings.substring(v: string(v: r._time), start: 11, end: 16) == "${hourMinute}")
-//           |> limit(n: 1)
-//       `
-//
-//     try {
-//       const referenceResults = await influxClient.query(referenceQuery)
-//
-//       if (referenceResults.length > 0) {
-//         referenceTime = new Date(referenceResults[0]._time)
-//         console.log(`  Found reference time: ${referenceTime.toISOString()}`)
-//       } else {
-//         console.log(`  No data found at reference hour ${hourMinute} for ${measurement}`)
-//         results[measurement] = {
-//           referenceTime: null,
-//           samples: [],
-//         }
-//         continue
-//       }
-//     } catch (error) {
-//       console.error(`  Error finding reference time for ${measurement}:`, error)
-//       results[measurement] = {
-//         referenceTime: null,
-//         samples: [],
-//       }
-//       continue
-//     }
-//
-//     // Step 2: Sample data forward from reference time at specified intervals
-//     const endTime = new Date(referenceTime)
-//     endTime.setHours(endTime.getHours() + lookbackHours)
-//
-//     const samplingQuery = `
-//         from(bucket: $bucket)
-//           |> range(start: ${referenceTime.toISOString()}, stop: ${endTime.toISOString()})
-//           |> filter(fn: (r) => r._measurement == "${measurement}")
-//           ${fields ? `|> filter(fn: (r) => ${fields.map((f) => `r._field == "${f}"`).join(' or ')})` : ''}
-//           |> aggregateWindow(every: ${intervalMinutes}m, fn: last, createEmpty: false)
-//       `
-//
-//     try {
-//       const samples = await influxClient.query(samplingQuery)
-//       console.log(`  Retrieved ${samples.length} samples`)
-//
-//       results[measurement] = {
-//         referenceTime,
-//         samples: samples.map((row) => ({
-//           time: row._time,
-//           field: row._field,
-//           value: row._value,
-//         })),
-//       }
-//     } catch (error) {
-//       console.error(`  Error sampling data for ${measurement}:`, error)
-//       results[measurement] = {
-//         referenceTime,
-//         samples: [],
-//       }
-//     }
-//   }
-//
-//   return results
-// }
