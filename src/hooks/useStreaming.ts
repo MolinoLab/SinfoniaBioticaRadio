@@ -32,7 +32,7 @@ export function useStreaming() {
       const res = await streamFields(influxClient, selectedFields, {
         start: startAgo,
         onRow: (rowsFieldValues, row) => {
-          console.log(new Date(row._time).toLocaleTimeString(), rowsFieldValues)
+          console.log(new Date(row._time).toLocaleString(), rowsFieldValues)
           playInfluxFields(rowsFieldValues)
         },
         shouldStop: () => stopSignalRef.current,
