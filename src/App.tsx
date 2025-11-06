@@ -3,8 +3,13 @@ import { playTone } from './libs/tone'
 import InfluxDBClient from './libs/influxDbClient'
 import { streamFields } from './libs/radio'
 import { useState, useEffect, useRef } from 'react'
+import { useConsole } from './contexts/ConsoleContext'
+import { ConsoleOutput } from './components/ConsoleOutput'
 
 function App() {
+  // Console context
+  const { addConsoleOutput } = useConsole()
+
   // State management
   const [startAgo, setStartAgo] = useState('-720h')
   const [fieldKeys, setFieldKeys] = useState<string[]>([])
@@ -12,25 +17,9 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isStreaming, setIsStreaming] = useState(false)
-  const [consoleOutput, setConsoleOutput] = useState<Array<{
-    timestamp: string;
-    message: string;
-    type: 'info' | 'error' | 'success'
-  }>>([])
 
   // Ref for stop signal (avoids re-renders)
   const stopSignalRef = useRef(false)
-
-  // Helper function to add console output
-  const addConsoleOutput = (message: string, type: 'info' | 'error' | 'success' = 'info') => {
-    const timestamp = new Date().toLocaleTimeString()
-    setConsoleOutput(prev => [...prev, { timestamp, message, type }])
-  }
-
-  // Helper function to clear console
-  const clearConsole = () => {
-    setConsoleOutput([])
-  }
   // Initialize the client
   const influxClient = new InfluxDBClient({
     url: import.meta.env.INFLUX_URL,
@@ -241,24 +230,7 @@ function App() {
           </div>
 
           {/* Console Output Section */}
-          <div className="section-container">
-            <div className="section-title">
-              💻 Console Output
-              <button onClick={clearConsole} className="clear-console-btn">Clear</button>
-            </div>
-            <div className="console-box">
-              {consoleOutput.length === 0 ? (
-                <div className="console-empty">Console is empty. Run a query to see results...</div>
-              ) : (
-                consoleOutput.map((log, index) => (
-                  <div key={index} className={`console-line console-${log.type}`}>
-                    <span className="console-timestamp">[{log.timestamp}]</span>
-                    <span className="console-message">{log.message}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+          <ConsoleOutput />
         </div>
 
         {/* Right Column - Configuration */}

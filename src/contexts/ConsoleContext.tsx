@@ -1,0 +1,50 @@
+import { createContext, useContext, useState, ReactNode } from 'react'
+
+export interface ConsoleEntry {
+  timestamp: string
+  message: string
+  type: 'info' | 'error' | 'success'
+}
+
+interface ConsoleContextType {
+  consoleOutput: ConsoleEntry[]
+  addConsoleOutput: (message: string, type?: 'info' | 'error' | 'success') => void
+  clearConsole: () => void
+}
+
+const ConsoleContext = createContext<ConsoleContextType | undefined>(undefined)
+
+interface ConsoleProviderProps {
+  children: ReactNode
+}
+
+export function ConsoleProvider({ children }: ConsoleProviderProps) {
+  const [consoleOutput, setConsoleOutput] = useState<ConsoleEntry[]>([])
+
+  const addConsoleOutput = (message: string, type: 'info' | 'error' | 'success' = 'info') => {
+    const timestamp = new Date().toLocaleTimeString()
+    setConsoleOutput((prev) => {
+      const newOutput = [...prev, { timestamp, message, type }]
+      // Keep only the most recent 500 entries
+      return newOutput.length > 500 ? newOutput.slice(-500) : newOutput
+    })
+  }
+
+  const clearConsole = () => {
+    setConsoleOutput([])
+  }
+
+  return (
+    <ConsoleContext.Provider value={{ consoleOutput, addConsoleOutput, clearConsole }}>
+      {children}
+    </ConsoleContext.Provider>
+  )
+}
+
+export function useConsole() {
+  const context = useContext(ConsoleContext)
+  if (context === undefined) {
+    throw new Error('useConsole must be used within a ConsoleProvider')
+  }
+  return context
+}
