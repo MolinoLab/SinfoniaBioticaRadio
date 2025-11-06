@@ -2,10 +2,15 @@ import './App.css'
 import { playTone } from './libs/tone'
 import InfluxDBClient from './libs/influxDbClient'
 import { streamMeasurements } from './libs/radio'
-
-const START_AGO = '-720h'
+import { useState, useEffect } from 'react'
 
 function App() {
+  // State management
+  const [startAgo, setStartAgo] = useState('-720h')
+  const [fieldKeys, setFieldKeys] = useState<string[]>([])
+  const [selectedFields, setSelectedFields] = useState<string[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   // Initialize the client
   const influxClient = new InfluxDBClient({
     url: import.meta.env.INFLUX_URL,
@@ -15,9 +20,36 @@ function App() {
     timeout: 10000, // optional
   })
 
+  // Load field keys on component mount
+  useEffect(() => {
+    const loadFieldKeys = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        const fields = await influxClient.getFieldKeys({ start: startAgo })
+
+        if (fields.length === 0) {
+          setError('No fields found in the database. Please check your InfluxDB connection and data.')
+          setFieldKeys([])
+        } else {
+          setFieldKeys(fields)
+          // Select all fields by default
+          setSelectedFields(fields)
+        }
+      } catch (err) {
+        setError(`Failed to load field keys: ${err instanceof Error ? err.message : String(err)}`)
+        setFieldKeys([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadFieldKeys()
+  }, []) // Only run once on mount
+
   const stream = async () => {
     console.log('Streaming results from InfluxDB...')
-    await influxClient.queryStream(`from(bucket: $bucket) |> range(start: ${START_AGO})`, (row) => {
+    await influxClient.queryStream(`from(bucket: $bucket) |> range(start: ${startAgo})`, (row) => {
       console.log('Row:', row)
     })
   }
@@ -25,14 +57,14 @@ function App() {
   const query = async () => {
     const results = await influxClient.query(`
   from(bucket: $bucket)
-    |> range(start: ${START_AGO})
+    |> range(start: ${startAgo})
 `)
     // |> filter(fn: (r) => r._measurement == "temperature")
     console.log(results)
   }
 
   const getInfluxSchemaAndTypes = async () => {
-    const schema = await influxClient.getInfluxSchemaAndTypes({ start: START_AGO })
+    const schema = await influxClient.getInfluxSchemaAndTypes({ start: startAgo })
     console.log('schema:', schema)
   }
 
@@ -42,36 +74,130 @@ function App() {
   }
 
   const _streamMeasurements = async () => {
-    // const schema = await influxClient.getInfluxSchemaAndTypes({ start: START_AGO })
-    // const measurements = Object.keys(schema)
-    //
-    // console.log(`Found ${measurements.length} measurements:`, measurements)
-    // const res = await streamMeasurements(influxClient, measurements, {
-    //   start: START_AGO,
-    // })
-    // console.log('measurements:', res)
+    try {
+      setError(null)
+
+      if (selectedFields.length === 0) {
+        setError('Please select at least one field to stream measurements.')
+        return
+      }
+
+      console.log(`Streaming ${selectedFields.length} selected fields:`, selectedFields)
+      const res = await streamMeasurements(influxClient, selectedFields, {
+        start: startAgo,
+      })
+      console.log('res:', res)
+    } catch (err) {
+      setError(`Failed to stream measurements: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
+  // Helper functions for checkbox selection
+  const handleFieldToggle = (field: string) => {
+    setSelectedFields((prev) =>
+      prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field],
+    )
+  }
+
+  const handleSelectAll = () => {
+    setSelectedFields(fieldKeys)
+  }
+
+  const handleDeselectAll = () => {
+    setSelectedFields([])
   }
 
 
   return (
     <div className="app-container">
-      <div className="section-container">
-        <div className="section-title">📻 Radio sinfonia biotica</div>
-        <button onClick={_streamMeasurements}>sample last hour</button>
-      </div>
-      <div className="section-container">
-        <div className="section-title">🗒 Tests</div>
-        <div className="button-group">
-          <button onClick={playTone}>Tonejs</button>
-          <button onClick={stream}>stream results</button>
-          <button onClick={query}>query</button>
+      {/* Error Display */}
+      {error && (
+        <div className="error-container">
+          <strong>Error:</strong> {error}
         </div>
-      </div>
-      <div className="section-container">
-        <div className="section-title">🔎 Explore influxDb schema</div>
-        <div className="button-group">
-          <button onClick={getInfluxSchemaAndTypes}>Get schema and types</button>
-          <button onClick={getFieldKeys}>Get field keys</button>
+      )}
+
+      {/* Loading Indicator */}
+      {isLoading && (
+        <div className="info-container">
+          Loading field keys...
+        </div>
+      )}
+
+      {/* Two Column Layout */}
+      <div className="two-column-layout">
+        {/* Left Column - Main Actions */}
+        <div className="left-column">
+          {/* Main Action Section */}
+          <div className="section-container">
+            <div className="section-title">📻 Radio sinfonia biotica</div>
+            <button onClick={_streamMeasurements} disabled={selectedFields.length === 0}>
+              Stream Selected fields
+            </button>
+          </div>
+          <div className="section-container">
+            <div className="section-title">🗒 Tests</div>
+            <div className="button-group">
+              <button onClick={playTone}>Tonejs</button>
+              <button onClick={stream}>stream results</button>
+              <button onClick={query}>query</button>
+            </div>
+          </div>
+          <div className="section-container">
+            <div className="section-title">🔎 Explore influxDb schema</div>
+            <div className="button-group">
+              <button onClick={getInfluxSchemaAndTypes}>Get schema and types</button>
+              <button onClick={getFieldKeys}>Get field keys</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Configuration */}
+        <div className="right-column">
+          {/* START_AGO Input Section */}
+          <div className="section-container">
+            <div className="section-title">⏱️ Time Range Configuration</div>
+            <div className="input-group">
+              <label htmlFor="start-ago">Time Range (start for all queries):</label>
+              <input
+                id="start-ago"
+                type="text"
+                value={startAgo}
+                onChange={(e) => setStartAgo(e.target.value)}
+                placeholder="-720h"
+              />
+              <div className="input-explanation">
+                Specify how far back to query data. Examples: -1h (last hour), -24h (last day), -7d (last week), -30d
+                (last month)
+              </div>
+            </div>
+          </div>
+
+          {/* Field Selection Section */}
+          {!isLoading && fieldKeys.length > 0 && (
+            <div className="section-container">
+              <div className="section-title">
+                🔘 Field Selection ({selectedFields.length}/{fieldKeys.length} selected)
+              </div>
+              <label class={'label'}>Select which fields should be queried by radio sinfonia biotica</label>
+              <div className="button-group">
+                <button onClick={handleSelectAll}>Select All</button>
+                <button onClick={handleDeselectAll}>Deselect All</button>
+              </div>
+              <div className="checkbox-container">
+                {fieldKeys.map((field) => (
+                  <label key={field} className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={selectedFields.includes(field)}
+                      onChange={() => handleFieldToggle(field)}
+                    />
+                    {field}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
