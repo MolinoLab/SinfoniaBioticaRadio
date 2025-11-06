@@ -6,19 +6,20 @@
  * @param {string} [options.start] - Start time (e.g., '-1h', '-7d'), default '-7d'
  * @returns {Promise<Object>} Schema info { [measurement]: { [field]: type } }
  */
-export const streamMeasurements = async (influxClient, fields, options = {}) => {
+export const streamFields = async (influxClient, fields, options = {}) => {
   const { start = '-1h' } = options
   console.log(`Sampling ${start} data by measurement type...`)
 
-  // Step 2: Query one sample from each measurement in the last hour
+  // build fields filters array
+  const filter = fields.map((f) => `r._field == "${f}"`).join(' or ')
+
   const samples = {}
 
   for (const field of fields) {
     const sampleQuery = `
         from(bucket: $bucket)
           |> range(start: ${start})
-          |> filter(fn: (r) => r._field == "${field}")
-          // |> limit(n: 1)
+          |> filter(fn: (r) => ${filter})
       `
     try {
       const results = await influxClient.query(sampleQuery)

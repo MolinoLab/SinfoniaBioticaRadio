@@ -1,7 +1,7 @@
 import './App.css'
 import { playTone } from './libs/tone'
 import InfluxDBClient from './libs/influxDbClient'
-import { streamMeasurements } from './libs/radio'
+import { streamFields } from './libs/radio'
 import { useState, useEffect } from 'react'
 
 function App() {
@@ -129,7 +129,7 @@ function App() {
 
       addConsoleOutput(`Streaming ${selectedFields.length} selected fields: ${selectedFields.join(', ')}`, 'info')
       console.log(`Streaming ${selectedFields.length} selected fields:`, selectedFields)
-      const res = await streamMeasurements(influxClient, selectedFields, {
+      const res = await streamFields(influxClient, selectedFields, {
         start: startAgo,
       })
       console.log('res:', res)
@@ -195,7 +195,7 @@ function App() {
           <div className="section-container">
             <div className="section-title">📻 Radio sinfonia biotica</div>
             <button onClick={_streamMeasurements} disabled={selectedFields.length === 0}>
-              Stream Selected fields
+              ▶️ Stream fields
             </button>
           </div>
           <div className="section-container">
