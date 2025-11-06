@@ -153,3 +153,83 @@ button:disabled {
 button:disabled:hover {
     background-color: #cccccc;
 }
+
+/* Console Box Styles */
+.console-box {
+    background-color: #1e1e1e;
+    border: 2px solid #333;
+    border-radius: 5px;
+    padding: 15px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    max-height: 400px;
+    overflow-y: auto;
+    color: #d4d4d4;
+    margin-top: 10px;
+}
+
+.console-empty {
+    color: #666;
+    font-style: italic;
+}
+
+.console-line {
+    margin-bottom: 8px;
+    line-height: 1.5;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+.console-timestamp {
+    color: #858585;
+    margin-right: 8px;
+    font-weight: bold;
+}
+
+.console-message {
+    color: #d4d4d4;
+}
+
+.console-info .console-message {
+    color: #4fc3f7;
+}
+
+.console-success .console-message {
+    color: #81c784;
+}
+
+.console-error .console-message {
+    color: #e57373;
+}
+
+/* Clear Console Button */
+.clear-console-btn {
+    float: right;
+    padding: 5px 15px;
+    font-size: 14px;
+    background-color: #f44336;
+    margin-left: 10px;
+}
+
+.clear-console-btn:hover {
+    background-color: #d32f2f;
+}
+
+/* Custom scrollbar for console */
+.console-box::-webkit-scrollbar {
+    width: 10px;
+}
+
+.console-box::-webkit-scrollbar-track {
+    background: #2d2d2d;
+    border-radius: 5px;
+}
+
+.console-box::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 5px;
+}
+
+.console-box::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}

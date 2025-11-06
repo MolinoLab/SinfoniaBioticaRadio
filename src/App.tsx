@@ -11,6 +11,22 @@ function App() {
   const [selectedFields, setSelectedFields] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [consoleOutput, setConsoleOutput] = useState<Array<{
+    timestamp: string;
+    message: string;
+    type: 'info' | 'error' | 'success'
+  }>>([])
+
+  // Helper function to add console output
+  const addConsoleOutput = (message: string, type: 'info' | 'error' | 'success' = 'info') => {
+    const timestamp = new Date().toLocaleTimeString()
+    setConsoleOutput(prev => [...prev, { timestamp, message, type }])
+  }
+
+  // Helper function to clear console
+  const clearConsole = () => {
+    setConsoleOutput([])
+  }
   // Initialize the client
   const influxClient = new InfluxDBClient({
     url: import.meta.env.INFLUX_URL,
@@ -48,29 +64,57 @@ function App() {
   }, []) // Only run once on mount
 
   const stream = async () => {
-    console.log('Streaming results from InfluxDB...')
-    await influxClient.queryStream(`from(bucket: $bucket) |> range(start: ${startAgo})`, (row) => {
-      console.log('Row:', row)
-    })
+    try {
+      addConsoleOutput('Streaming results from InfluxDB...', 'info')
+      let rowCount = 0
+      await influxClient.queryStream(`from(bucket: $bucket) |> range(start: ${startAgo})`, (row) => {
+        rowCount++
+        console.log('Row:', row)
+      })
+      addConsoleOutput(`Stream completed. Received ${rowCount} rows.`, 'success')
+    } catch (err) {
+      addConsoleOutput(`Stream failed: ${err instanceof Error ? err.message : String(err)}`, 'error')
+    }
   }
 
   const query = async () => {
-    const results = await influxClient.query(`
+    try {
+      addConsoleOutput('Querying InfluxDB...', 'info')
+      const results = await influxClient.query(`
   from(bucket: $bucket)
     |> range(start: ${startAgo})
 `)
-    // |> filter(fn: (r) => r._measurement == "temperature")
-    console.log(results)
+      // |> filter(fn: (r) => r._measurement == "temperature")
+      console.log(results)
+      addConsoleOutput(`Query completed. Found ${results.length} results.`, 'success')
+      addConsoleOutput(JSON.stringify(results.slice(0, 3), null, 2), 'info') // Show first 3 results
+    } catch (err) {
+      addConsoleOutput(`Query failed: ${err instanceof Error ? err.message : String(err)}`, 'error')
+    }
   }
 
   const getInfluxSchemaAndTypes = async () => {
-    const schema = await influxClient.getInfluxSchemaAndTypes({ start: startAgo })
-    console.log('schema:', schema)
+    try {
+      addConsoleOutput('Fetching InfluxDB schema and types...', 'info')
+      const schema = await influxClient.getInfluxSchemaAndTypes({ start: startAgo })
+      console.log('schema:', schema)
+      addConsoleOutput('Schema retrieved successfully:', 'success')
+      addConsoleOutput(JSON.stringify(schema, null, 2), 'info')
+    } catch (err) {
+      addConsoleOutput(`Failed to get schema: ${err instanceof Error ? err.message : String(err)}`, 'error')
+    }
   }
 
   const getFieldKeys = async () => {
-    const schema = await influxClient.getFieldKeys()
-    console.log('getFieldKeys:', schema)
+    try {
+      addConsoleOutput('Fetching field keys...', 'info')
+      const schema = await influxClient.getFieldKeys()
+      console.log('getFieldKeys:', schema)
+      addConsoleOutput('Field keys retrieved successfully:', 'success')
+      addConsoleOutput(`Fields: ${schema.join(', ')}`, 'info')
+    } catch (err) {
+      addConsoleOutput(`Failed to get field keys: ${err instanceof Error ? err.message : String(err)}`, 'error')
+    }
   }
 
   const _streamMeasurements = async () => {
@@ -79,16 +123,35 @@ function App() {
 
       if (selectedFields.length === 0) {
         setError('Please select at least one field to stream measurements.')
+        addConsoleOutput('Cannot stream: No fields selected', 'error')
         return
       }
 
+      addConsoleOutput(`Streaming ${selectedFields.length} selected fields: ${selectedFields.join(', ')}`, 'info')
       console.log(`Streaming ${selectedFields.length} selected fields:`, selectedFields)
       const res = await streamMeasurements(influxClient, selectedFields, {
         start: startAgo,
       })
       console.log('res:', res)
+
+      // Log results summary
+      const fieldCount = Object.keys(res).length
+      let totalRecords = 0
+      for (const field in res) {
+        totalRecords += res[field].length
+      }
+      addConsoleOutput(`Stream completed. Retrieved ${totalRecords} total records across ${fieldCount} fields.`, 'success')
+
+      // Show sample data for each field
+      for (const field in res) {
+        if (res[field].length > 0) {
+          addConsoleOutput(`Field "${field}": ${res[field].length} records`, 'info')
+        }
+      }
     } catch (err) {
-      setError(`Failed to stream measurements: ${err instanceof Error ? err.message : String(err)}`)
+      const errorMsg = `Failed to stream measurements: ${err instanceof Error ? err.message : String(err)}`
+      setError(errorMsg)
+      addConsoleOutput(errorMsg, 'error')
     }
   }
 
@@ -150,6 +213,26 @@ function App() {
               <button onClick={getFieldKeys}>Get field keys</button>
             </div>
           </div>
+
+          {/* Console Output Section */}
+          <div className="section-container">
+            <div className="section-title">
+              💻 Console Output
+              <button onClick={clearConsole} className="clear-console-btn">Clear</button>
+            </div>
+            <div className="console-box">
+              {consoleOutput.length === 0 ? (
+                <div className="console-empty">Console is empty. Run a query to see results...</div>
+              ) : (
+                consoleOutput.map((log, index) => (
+                  <div key={index} className={`console-line console-${log.type}`}>
+                    <span className="console-timestamp">[{log.timestamp}]</span>
+                    <span className="console-message">{log.message}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Right Column - Configuration */}
@@ -179,7 +262,7 @@ function App() {
               <div className="section-title">
                 🔘 Field Selection ({selectedFields.length}/{fieldKeys.length} selected)
               </div>
-              <label class={'label'}>Select which fields should be queried by radio sinfonia biotica</label>
+              <label>Select which fields should be queried by radio sinfonia biotica</label>
               <div className="button-group">
                 <button onClick={handleSelectAll}>Select All</button>
                 <button onClick={handleDeselectAll}>Deselect All</button>
