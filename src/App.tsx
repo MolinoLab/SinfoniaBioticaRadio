@@ -9,12 +9,12 @@ import { FieldSelector } from './components/FieldSelector'
 import { ConsoleOutput } from './components/ConsoleOutput'
 
 function App() {
-  const { error, isLoading } = useFieldSelection()
+  const { error, isLoading, setError } = useFieldSelection()
 
   return (
     <div className='app-container'>
       {/* Error Display */}
-      <ErrorDisplay error={error} />
+      <ErrorDisplay error={error} onClose={() => setError(null)} />
 
       {/* Loading Indicator */}
       {isLoading && <div className='info-container'>Loading field keys...</div>}
