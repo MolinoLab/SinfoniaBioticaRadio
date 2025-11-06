@@ -216,7 +216,7 @@ class InfluxDBClient {
    * @param {string} [options.stop] - Stop time
    * @param {string} [options.window] - Window duration (e.g., '1h', '5m')
    * @param {string} [options.bucket] - Optional bucket override
-   * @returns {Promise<Array>} Aggregated results
+   * @returns {Promise<*[]>} Aggregated results
    */
   // async queryAggregate(options) {
   //   const {
@@ -247,15 +247,25 @@ class InfluxDBClient {
   //   return await this.query(query)
   // }
 
-  /**
-   * Get all measurements, fields, and inferred data types from an InfluxDB bucket.
-   * @param {Object} [options] - Query options
-   * @param {string} [options.start] - Start time (e.g., '-1h', '-7d'), default '-7d'
-   * @returns {Promise<Object>} Schema info { [measurement]: { [field]: type } }
-   */
-  async getInfluxSchema(options = {}) {
-    const { start = '-7d' } = options
-    // Step 1: Get all measurements
+  async getFieldKeys(options = {}) {
+    const { measurement = 'environment' } = options
+    const measurementQuery = `
+    import "influxdata/influxdb/schema"
+    schema.measurementFieldKeys(bucket: "${this.bucket}", measurement: "${measurement}")
+  `
+    const fieldKeys = []
+
+    // const measures = await this.queryApi.iterateRows(measurementQuery)
+    const fields = await this.queryApi.collectRows(measurementQuery)
+
+    for (const value of fields) {
+      fieldKeys.push(value._value)
+    }
+
+    return fieldKeys
+  }
+
+  async getMeasurements(options = {}) {
     const measurementQuery = `
     import "influxdata/influxdb/schema"
     schema.measurements(bucket: "${this.bucket}")
@@ -269,6 +279,19 @@ class InfluxDBClient {
       measurements.add(value._value)
     }
 
+    return measurements
+  }
+
+  /**
+   * Get all measurements, fields, and inferred data types from an InfluxDB bucket.
+   * @param {Object} [options] - Query options
+   * @param {string} [options.start] - Start time (e.g., '-1h', '-7d'), default '-7d'
+   * @returns {Promise<Object>} Schema info { [measurement]: { [field]: type } }
+   */
+  async getInfluxSchemaAndTypes(options = {}) {
+    const { start = '-7d' } = options
+    // Step 1: Get all measurements
+    const measurements = await this.getMeasurements()
     const schema = {}
 
     // Step 2: For each measurement, query one point to infer field types
