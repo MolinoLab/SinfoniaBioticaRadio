@@ -248,6 +248,57 @@ class InfluxDBClient {
   // }
 
   /**
+   * Get all measurements, fields, and inferred data types from an InfluxDB bucket.
+   * @param {Object} [options] - Query options
+   * @param {string} [options.start] - Start time (e.g., '-1h', '-7d'), default '-7d'
+   * @returns {Promise<Object>} Schema info { [measurement]: { [field]: type } }
+   */
+  async getInfluxSchema(options = {}) {
+    const { start = '-7d' } = options
+    // Step 1: Get all measurements
+    const measurementQuery = `
+    import "influxdata/influxdb/schema"
+    schema.measurements(bucket: "${this.bucket}")
+  `
+    const measurements = new Set()
+
+    // const measures = await this.queryApi.iterateRows(measurementQuery)
+    const measures = await this.queryApi.collectRows(measurementQuery)
+
+    for (const value of measures) {
+      measurements.add(value._value)
+    }
+
+    const schema = {}
+
+    // Step 2: For each measurement, query one point to infer field types
+    for (const measurement of measurements) {
+      const sampleQuery = `
+      from(bucket: "${this.bucket}")
+        |> range(start: ${start})
+        |> filter(fn: (r) => r._measurement == "${measurement}")
+        |> limit(n: 1)
+    `
+
+      const fields = {}
+      const _fields = await this.queryApi.collectRows(sampleQuery)
+
+      for (const values of _fields) {
+        const fieldName = values._field
+        const value = values._value
+        const jsType = typeof value
+        if (fieldName && jsType) {
+          fields[fieldName] = jsType
+        }
+      }
+
+      schema[measurement] = fields
+    }
+
+    return schema
+  }
+
+  /**
    * Close the client connection
    */
   async close() {

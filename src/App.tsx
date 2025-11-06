@@ -2,12 +2,9 @@ import './App.css'
 import { playTone } from './libs/tone'
 import InfluxDBClient from './libs/influxDb'
 
-function App() {
-  console.log(import.meta.env.INFLUX_URL)
-  console.log(import.meta.env.INFLUX_TOKEN)
-  console.log(import.meta.env.INFLUX_ORG)
-  console.log(import.meta.env.INFLUX_BUCKET)
+const START_AGO = '-720h'
 
+function App() {
   // Initialize the client
   const influxClient = new InfluxDBClient({
     url: import.meta.env.INFLUX_URL,
@@ -19,15 +16,20 @@ function App() {
 
   const stream = async () => {
     console.log('Streaming results from InfluxDB...')
-    await influxClient.queryStream('from(bucket: $bucket) |> range(start: -1h)', (row) => {
+    await influxClient.queryStream(`from(bucket: $bucket) |> range(start: ${START_AGO})`, (row) => {
       console.log('Row:', row)
     })
+  }
+
+  const getInfluxSchema = async () => {
+    const schema = await influxClient.getInfluxSchema({ start: START_AGO })
+    console.log('schema:', schema)
   }
 
   const query = async () => {
     const results = await influxClient.query(`
   from(bucket: $bucket)
-    |> range(start: -1h)
+    |> range(start: ${START_AGO})
 `)
     // |> filter(fn: (r) => r._measurement == "temperature")
     console.log(results)
@@ -38,6 +40,8 @@ function App() {
       <button onClick={playTone}>play</button>
       <button onClick={stream}>stream results</button>
       <button onClick={query}>query</button>
+      <button onClick={getInfluxSchema}>getInfluxSchema</button>
+      <button onClick={testSampling}>sample data</button>
     </>
   )
 }
