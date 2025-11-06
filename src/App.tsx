@@ -1,6 +1,6 @@
 import './App.css'
 import { playTone } from './libs/tone'
-import InfluxDBClient from './libs/influxDb'
+import InfluxDBClient from './libs/influxDbClient'
 
 const START_AGO = '-720h'
 
