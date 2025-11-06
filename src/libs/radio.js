@@ -1,35 +1,69 @@
 /**
- * streamMeasurements - Streams sample data from each measurement type in the last hour
+ * streamFields - Streams data from selected fields in real-time
  * @param influxClient - InfluxDB client instance
- * @param measurements - Array of measurement names to sample
+ * @param fields - Array of field names to stream
  * @param {Object} [options] - Query options
- * @param {string} [options.start] - Start time (e.g., '-1h', '-7d'), default '-7d'
- * @returns {Promise<Object>} Schema info { [measurement]: { [field]: type } }
+ * @param {string} [options.start] - Start time (e.g., '-1h', '-7d'), default '-1h'
+ * @param {Function} [options.onRow] - Callback for each row: (field, row) => void
+ * @param {Function} [options.shouldStop] - Callback to check if streaming should stop: () => boolean
+ * @returns {Promise<Object>} Summary statistics { totalRows, rowsByField }
  */
 export const streamFields = async (influxClient, fields, options = {}) => {
-  const { start = '-1h' } = options
-  console.log(`Sampling ${start} data by measurement type...`)
+  const { start = '-1h', onRow, shouldStop } = options
+  console.log(`Streaming ${start} data for ${fields.length} fields...`)
 
-  // build fields filters array
+  // Build fields filter for single query
   const filter = fields.map((f) => `r._field == "${f}"`).join(' or ')
 
-  const samples = {}
+  const sampleQuery = `
+      from(bucket: $bucket)
+        |> range(start: ${start})
+        |> filter(fn: (r) => r._measurement == "environment")
+        |> filter(fn: (r) => ${filter})
+        |> pivot(
+            rowKey: ["_time"],
+            columnKey: ["_field"],
+            valueColumn: "_value"
+        )
+        |> sort(columns: ["_time"], desc: false)
+    `
 
-  for (const field of fields) {
-    const sampleQuery = `
-        from(bucket: $bucket)
-          |> range(start: ${start})
-          |> filter(fn: (r) => ${filter})
-      `
-    try {
-      const results = await influxClient.query(sampleQuery)
-      samples[field] = results
-      console.log(`  ${field}:`, results)
-    } catch (error) {
-      console.error(`Error querying ${field}:`, error)
-      samples[field] = []
-    }
+  let totalRows = 0
+  const rowsByField = {}
+
+  // Initialize counters
+  fields.forEach((field) => {
+    rowsByField[field] = 0
+  })
+
+  try {
+    await influxClient.queryStream(sampleQuery, (row) => {
+      // Check stop signal immediately
+      if (shouldStop && shouldStop()) {
+        return
+      }
+      totalRows++
+      const rowsFieldValues = {}
+
+      // Display each row in console as it arrives
+      for (const field of fields) {
+        if (row[field]) {
+          rowsByField[field]++
+          rowsFieldValues[field] = row[field]
+        }
+      }
+
+      // Call the row callback if provided
+      if (onRow) {
+        onRow(rowsFieldValues, row)
+      }
+    })
+
+    console.log(`Stream completed. Total rows: ${totalRows}`)
+  } catch (error) {
+    console.error(`Error streaming fields:`, error)
+    throw error
   }
 
-  return samples
+  return { totalRows, rowsByField }
 }

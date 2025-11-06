@@ -30,10 +30,13 @@ export function useStreaming() {
 
       const res = await streamFields(influxClient, selectedFields, {
         start: startAgo,
-        onRow: (field, row) => {
-          // Display each row in console as it arrives
-          const rowData = `${field}: ${row._value} (${new Date(row._time).toLocaleTimeString()})`
+        onRow: (rowsFieldValues, row) => {
+          const debug = Object.entries(rowsFieldValues).map(([key, value]) => {
+            return `${key}: ${value}`
+          })
+          const rowData = `${new Date(row._time).toLocaleTimeString()}:\n${debug.join('\n')}`
           console.log(rowData)
+          // console.log('AAAA', rowsFieldValues, row)
         },
         shouldStop: () => stopSignalRef.current,
       })
