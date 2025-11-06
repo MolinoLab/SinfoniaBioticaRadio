@@ -2,7 +2,7 @@ import './App.css'
 import { playTone } from './libs/tone'
 import InfluxDBClient from './libs/influxDbClient'
 import { streamFields } from './libs/radio'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 function App() {
   // State management
@@ -11,11 +11,15 @@ function App() {
   const [selectedFields, setSelectedFields] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isStreaming, setIsStreaming] = useState(false)
   const [consoleOutput, setConsoleOutput] = useState<Array<{
     timestamp: string;
     message: string;
     type: 'info' | 'error' | 'success'
   }>>([])
+
+  // Ref for stop signal (avoids re-renders)
+  const stopSignalRef = useRef(false)
 
   // Helper function to add console output
   const addConsoleOutput = (message: string, type: 'info' | 'error' | 'success' = 'info') => {
@@ -127,32 +131,51 @@ function App() {
         return
       }
 
-      addConsoleOutput(`Streaming ${selectedFields.length} selected fields: ${selectedFields.join(', ')}`, 'info')
+      // Reset stop signal and start streaming
+      stopSignalRef.current = false
+      setIsStreaming(true)
+
+      addConsoleOutput(`Starting stream for ${selectedFields.length} fields: ${selectedFields.join(', ')}`, 'info')
       console.log(`Streaming ${selectedFields.length} selected fields:`, selectedFields)
+
       const res = await streamFields(influxClient, selectedFields, {
         start: startAgo,
+        onRow: (field, row) => {
+          // Display each row in console as it arrives
+          const rowData = `${field}: ${row._value} (${new Date(row._time).toLocaleTimeString()})`
+          console.log(rowData)
+        },
+        shouldStop: () => stopSignalRef.current,
       })
-      console.log('res:', res)
 
-      // Log results summary
-      const fieldCount = Object.keys(res).length
-      let totalRecords = 0
-      for (const field in res) {
-        totalRecords += res[field].length
+      console.log('Stream result:', res)
+
+      // Log final summary
+      const wasStopped = stopSignalRef.current
+      if (wasStopped) {
+        addConsoleOutput(`Stream stopped by user. Processed ${res.totalRows} rows.`, 'info')
+      } else {
+        addConsoleOutput(`Stream completed. Total rows: ${res.totalRows}`, 'success')
       }
-      addConsoleOutput(`Stream completed. Retrieved ${totalRecords} total records across ${fieldCount} fields.`, 'success')
 
-      // Show sample data for each field
-      for (const field in res) {
-        if (res[field].length > 0) {
-          addConsoleOutput(`Field "${field}": ${res[field].length} records`, 'info')
+      // Show breakdown by field
+      for (const field in res.rowsByField) {
+        if (res.rowsByField[field] > 0) {
+          addConsoleOutput(`  ${field}: ${res.rowsByField[field]} rows`, 'info')
         }
       }
     } catch (err) {
       const errorMsg = `Failed to stream measurements: ${err instanceof Error ? err.message : String(err)}`
       setError(errorMsg)
       addConsoleOutput(errorMsg, 'error')
+    } finally {
+      setIsStreaming(false)
     }
+  }
+
+  const stopStreaming = () => {
+    stopSignalRef.current = true
+    addConsoleOutput('Stopping stream...', 'info')
   }
 
   // Helper functions for checkbox selection
@@ -194,8 +217,11 @@ function App() {
           {/* Main Action Section */}
           <div className="section-container">
             <div className="section-title">📻 Radio sinfonia biotica</div>
-            <button onClick={_streamMeasurements} disabled={selectedFields.length === 0}>
-              ▶️ Stream fields
+            <button
+              onClick={isStreaming ? stopStreaming : _streamMeasurements}
+              disabled={!isStreaming && selectedFields.length === 0}
+            >
+              {isStreaming ? '⏹️ Stop Stream' : '▶️ Stream fields'}
             </button>
           </div>
           <div className="section-container">
