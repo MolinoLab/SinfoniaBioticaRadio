@@ -18,7 +18,7 @@ export const streamFields = async (influxClient, fields, options = {}) => {
   const sampleQuery = `
       from(bucket: $bucket)
         |> range(start: ${start})
-        |> filter(fn: (r) => r._measurement == "environment")
+        // |> filter(fn: (r) => r._measurement == "environment")
         |> filter(fn: (r) => ${filter})
         |> pivot(
             rowKey: ["_time"],
