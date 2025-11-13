@@ -1,5 +1,5 @@
 import { useStreaming } from '../hooks/useStreaming'
-import { useFieldSelection } from '../contexts/FieldSelectionContext'
+import { useFieldSelection } from '../contexts/useFieldSelection'
 
 export function RadioPlayer() {
   const { isStreaming, startStreaming, stopStreaming } = useStreaming()

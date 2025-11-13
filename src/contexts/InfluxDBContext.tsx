@@ -1,11 +1,6 @@
-import { createContext, ReactNode, useContext } from 'react'
+import { ReactNode } from 'react'
 import InfluxDBClient from '../libs/influxDbClient'
-
-interface InfluxDBContextType {
-  client: InfluxDBClient
-}
-
-export const InfluxDBContext = createContext<InfluxDBContextType | null>(null)
+import { InfluxDBContext as InfluxDBContext1 } from './useInfluxDB'
 
 interface InfluxDBProviderProps {
   children: ReactNode
@@ -21,13 +16,5 @@ export function InfluxDBProvider({ children }: InfluxDBProviderProps) {
     timeout: 10000,
   })
 
-  return <InfluxDBContext.Provider value={{ client }}>{children}</InfluxDBContext.Provider>
-}
-
-export function useInfluxDB() {
-  const context = useContext(InfluxDBContext)
-  if (!context) {
-    throw new Error('useInfluxDB must be used within InfluxDBProvider')
-  }
-  return context.client
+  return <InfluxDBContext1 value={{ client }}>{children}</InfluxDBContext1>
 }

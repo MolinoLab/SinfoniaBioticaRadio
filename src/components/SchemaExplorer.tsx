@@ -1,6 +1,6 @@
-import { useFieldSelection } from '../contexts/FieldSelectionContext'
-import { useConsole } from '../contexts/ConsoleContext'
-import { useInfluxDB } from '../contexts/InfluxDBContext'
+import { useInfluxDB } from '../contexts/useInfluxDB'
+import { useFieldSelection } from '../contexts/useFieldSelection'
+import { useConsole } from '../contexts/useConsole'
 
 export function SchemaExplorer() {
   const influxClient = useInfluxDB()

@@ -1,18 +1,11 @@
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
+import { ConsoleContext } from './useConsole'
 
 export interface ConsoleEntry {
   timestamp: string
   message: string
   type: 'info' | 'error' | 'success'
 }
-
-interface ConsoleContextType {
-  consoleOutput: ConsoleEntry[]
-  addConsoleOutput: (message: string, type?: 'info' | 'error' | 'success') => void
-  clearConsole: () => void
-}
-
-const ConsoleContext = createContext<ConsoleContextType | undefined>(undefined)
 
 interface ConsoleProviderProps {
   children: ReactNode
@@ -39,12 +32,4 @@ export function ConsoleProvider({ children }: ConsoleProviderProps) {
       {children}
     </ConsoleContext.Provider>
   )
-}
-
-export function useConsole() {
-  const context = useContext(ConsoleContext)
-  if (context === undefined) {
-    throw new Error('useConsole must be used within a ConsoleProvider')
-  }
-  return context
 }

@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react'
-import { useConsole } from '../contexts/ConsoleContext'
 import { streamFields } from '../libs/radio'
-import { useInfluxDB } from '../contexts/InfluxDBContext'
-import { useFieldSelection } from '../contexts/FieldSelectionContext'
 import { playInfluxFields } from '../libs/tone'
+
+import { useInfluxDB } from '../contexts/useInfluxDB'
+import { useFieldSelection } from '../contexts/useFieldSelection'
+import { useConsole } from '../contexts/useConsole'
 
 export function useStreaming() {
   const influxClient = useInfluxDB()

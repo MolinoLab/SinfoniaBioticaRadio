@@ -1,4 +1,4 @@
-import { useFieldSelection } from '../contexts/FieldSelectionContext'
+import { useFieldSelection } from '../contexts/useFieldSelection'
 
 export function FieldSelector() {
   const { fieldKeys, selectedFields, isLoading, handleFieldToggle, handleSelectAll, handleDeselectAll } =

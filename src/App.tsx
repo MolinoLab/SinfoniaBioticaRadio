@@ -1,5 +1,4 @@
 import './App.css'
-import { useFieldSelection } from './contexts/FieldSelectionContext'
 import { ErrorDisplay } from './components/ErrorDisplay'
 import { RadioPlayer } from './components/RadioPlayer'
 import { TestPanel } from './components/TestPanel'
@@ -7,6 +6,7 @@ import { SchemaExplorer } from './components/SchemaExplorer'
 import { TimeRangeConfig } from './components/TimeRangeConfig'
 import { FieldSelector } from './components/FieldSelector'
 import { ConsoleOutput } from './components/ConsoleOutput'
+import { useFieldSelection } from './contexts/useFieldSelection'
 
 function App() {
   const { error, isLoading, setError } = useFieldSelection()

@@ -1,4 +1,4 @@
-import { useFieldSelection } from '../contexts/FieldSelectionContext'
+import { useFieldSelection } from '../contexts/useFieldSelection'
 
 export function TimeRangeConfig() {
   const { startAgo, setStartAgo, measurement, setMeasurement } = useFieldSelection()
@@ -15,9 +15,7 @@ export function TimeRangeConfig() {
           onChange={(e) => setMeasurement(e.target.value)}
           placeholder='environment'
         />
-        <div className='input-explanation'>
-          The measurement name to query from InfluxDB. Default: environment
-        </div>
+        <div className='input-explanation'>The measurement name to query from InfluxDB. Default: environment</div>
       </div>
       <div className='input-group'>
         <label htmlFor='start-ago'>Time Range (start for all queries):</label>
