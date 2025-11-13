@@ -15,18 +15,20 @@ export function RadioPlayer() {
   return (
     <div className='section-container'>
       <div className='section-title'>📻 Radio sinfonia biotica</div>
-      <button
-        onClick={isStreaming ? stopStreaming : startStreaming}
-        disabled={!isStreaming && selectedFields.length === 0}
-      >
-        {isStreaming ? '⏹️ Stop Stream' : '▶️ Stream fields'}
-      </button>
-      <button
-        onClick={isMidiStreaming ? stopMidiStreaming : startMidiStreaming}
-        disabled={!isMidiStreaming && selectedFields.length === 0}
-      >
-        {isMidiStreaming ? '⏹️ Stop midi' : '▶️ Stream midi radio'}
-      </button>
+      <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+        <button
+          onClick={isStreaming ? stopStreaming : startStreaming}
+          disabled={!isStreaming && selectedFields.length === 0}
+        >
+          {isStreaming ? '⏹️ Stop Stream' : '▶️ Stream fields'}
+        </button>
+        <button
+          onClick={isMidiStreaming ? stopMidiStreaming : startMidiStreaming}
+          disabled={!isMidiStreaming && selectedFields.length === 0}
+        >
+          {isMidiStreaming ? '⏹️ Stop midi' : '▶️ Stream midi radio'}
+        </button>
+      </div>
     </div>
   )
 }
