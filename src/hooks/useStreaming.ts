@@ -7,7 +7,7 @@ import { playInfluxFields } from '../libs/tone'
 
 export function useStreaming() {
   const influxClient = useInfluxDB()
-  const { selectedFields, startAgo, setError } = useFieldSelection()
+  const { selectedFields, startAgo, measurement, setError } = useFieldSelection()
   const { addConsoleOutput } = useConsole()
   const [isStreaming, setIsStreaming] = useState(false)
   const stopSignalRef = useRef(false)
@@ -31,6 +31,7 @@ export function useStreaming() {
 
       const res = await streamFields(influxClient, selectedFields, {
         start: startAgo,
+        measurement,
         onRow: (rowsFieldValues, row) => {
           console.log(new Date(row._time).toLocaleString(), rowsFieldValues)
           playInfluxFields(rowsFieldValues)

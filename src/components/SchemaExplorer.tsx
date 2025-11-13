@@ -4,7 +4,7 @@ import { useInfluxDB } from '../contexts/InfluxDBContext'
 
 export function SchemaExplorer() {
   const influxClient = useInfluxDB()
-  const { startAgo } = useFieldSelection()
+  const { startAgo, measurement } = useFieldSelection()
   const { addConsoleOutput } = useConsole()
 
   const getInfluxSchemaAndTypes = async () => {
@@ -22,7 +22,7 @@ export function SchemaExplorer() {
   const getFieldKeys = async () => {
     try {
       addConsoleOutput('Fetching field keys...', 'info')
-      const schema = await influxClient.getFieldKeys()
+      const schema = await influxClient.getFieldKeys({ measurement })
       console.log('getFieldKeys:', schema)
       addConsoleOutput('Field keys retrieved successfully:', 'success')
       addConsoleOutput(`Fields: ${schema.join(', ')}`, 'info')

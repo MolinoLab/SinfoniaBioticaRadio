@@ -12,6 +12,8 @@ interface FieldSelectionContextType {
   handleDeselectAll: () => void
   startAgo: string
   setStartAgo: (value: string) => void
+  measurement: string
+  setMeasurement: (value: string) => void
 }
 
 export const FieldSelectionContext = createContext<FieldSelectionContextType | null>(null)
@@ -28,18 +30,19 @@ export function FieldSelectionProvider({ children }: FieldSelectionProviderProps
   const { client } = influxContext
 
   const [startAgo, setStartAgo] = useState('-720h')
+  const [measurement, setMeasurement] = useState('environment')
   const [fieldKeys, setFieldKeys] = useState<string[]>([])
   const [selectedFields, setSelectedFields] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Load field keys on component mount
+  // Load field keys when measurement changes
   useEffect(() => {
     const loadFieldKeys = async () => {
       try {
         setIsLoading(true)
         setError(null)
-        const fields = await client.getFieldKeys()
+        const fields = await client.getFieldKeys({ measurement })
 
         if (fields.length === 0) {
           setError('No fields found in the database. Please check your InfluxDB connection and data.')
@@ -58,7 +61,7 @@ export function FieldSelectionProvider({ children }: FieldSelectionProviderProps
     }
 
     loadFieldKeys()
-  }, [client])
+  }, [client, measurement])
 
   const handleFieldToggle = (field: string) => {
     setSelectedFields((prev) => (prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field]))
@@ -85,6 +88,8 @@ export function FieldSelectionProvider({ children }: FieldSelectionProviderProps
         handleDeselectAll,
         startAgo,
         setStartAgo,
+        measurement,
+        setMeasurement,
       }}
     >
       {children}
@@ -92,7 +97,7 @@ export function FieldSelectionProvider({ children }: FieldSelectionProviderProps
   )
 }
 
-export function useFieldSelection() {
+export const useFieldSelection = () => {
   const context = useContext(FieldSelectionContext)
   if (!context) {
     throw new Error('useFieldSelection must be used within FieldSelectionProvider')

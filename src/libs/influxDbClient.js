@@ -247,6 +247,12 @@ class InfluxDBClient {
   //   return await this.query(query)
   // }
 
+  /**
+   * Get field keys of a bucket and measurement
+   * @param {Object} options - Aggregation options
+   * @param {string} [options.measurement] - Measurement name
+   * @returns {Promise<*[]>} Aggregated results
+   */
   async getFieldKeys(options = {}) {
     const { measurement = 'environmental' } = options
     const measurementQuery = `
@@ -336,49 +342,3 @@ class InfluxDBClient {
 }
 
 export default InfluxDBClient
-
-// Export the class
-// module.exports = InfluxDBClient
-
-// Usage example (comment out before importing):
-/*
-const client = new InfluxDBClient({
-  url: 'http://localhost:8086',
-  token: 'your-token',
-  org: 'your-org',
-  bucket: 'your-bucket'
-});
-
-// Query all data
-const results = await client.query(`
-  from(bucket: $bucket)
-    |> range(start: -1h)
-    |> filter(fn: (r) => r._measurement == "temperature")
-`);
-
-// Query with helper
-const data = await client.queryMeasurement({
-  measurement: 'temperature',
-  field: 'value',
-  start: '-24h',
-  filters: { location: 'office' }
-});
-
-// Write data
-await client.writePoint({
-  measurement: 'temperature',
-  tags: { location: 'office', sensor: 'A1' },
-  fields: { value: 23.5, humidity: 45 }
-});
-
-// Get aggregated data
-const avgTemp = await client.queryAggregate({
-  measurement: 'temperature',
-  field: 'value',
-  aggregateFunction: 'mean',
-  window: '1h',
-  start: '-7d'
-});
-
-await client.close();
-*/

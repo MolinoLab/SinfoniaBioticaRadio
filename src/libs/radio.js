@@ -3,13 +3,11 @@
  * @param influxClient - InfluxDB client instance
  * @param fields - Array of field names to stream
  * @param {Object} [options] - Query options
- * @param {string} [options.start] - Start time (e.g., '-1h', '-7d'), default '-1h'
- * @param {Function} [options.onRow] - Callback for each row: (field, row) => void
- * @param {Function} [options.shouldStop] - Callback to check if streaming should stop: () => boolean
- * @returns {Promise<Object>} Summary statistics { totalRows, rowsByField }
+ * @param {string} [options.measurement] - name of measurement, for ex. environment
+ * @param {string} [options.start] - Start time (e.g., '-1h', '-7d'), default '-1h' * @param {Function} [options.onRow] - Callback for each row: (field, row) => void * @param {Function} [options.shouldStop] - Callback to check if streaming should stop: () => boolean * @returns {Promise<Object>} Summary statistics { totalRows, rowsByField }
  */
 export const streamFields = async (influxClient, fields, options = {}) => {
-  const { start = '-1h', onRow, shouldStop } = options
+  const { start = '-1h', onRow, shouldStop, measurement = 'environment' } = options
   console.log(`Streaming ${start} data for ${fields.length} fields...`)
 
   // Build fields filter for single query
@@ -18,7 +16,7 @@ export const streamFields = async (influxClient, fields, options = {}) => {
   const sampleQuery = `
       from(bucket: $bucket)
         |> range(start: ${start})
-        // |> filter(fn: (r) => r._measurement == "environment")
+        |> filter(fn: (r) => r._measurement == "${measurement}")
         |> filter(fn: (r) => ${filter})
         |> pivot(
             rowKey: ["_time"],
