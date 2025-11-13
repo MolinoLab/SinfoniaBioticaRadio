@@ -248,7 +248,7 @@ class InfluxDBClient {
   // }
 
   async getFieldKeys(options = {}) {
-    const { measurement = 'environment' } = options
+    const { measurement = 'environmental' } = options
     const measurementQuery = `
     import "influxdata/influxdb/schema"
     schema.measurementFieldKeys(bucket: "${this.bucket}", measurement: "${measurement}")
