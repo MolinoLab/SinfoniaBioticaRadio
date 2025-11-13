@@ -1,19 +1,27 @@
 import { useState, useRef } from 'react'
 import { streamFields } from '../libs/radio'
-import { playInfluxFields } from '../libs/tone'
+import { playInfluxFields, playInfluxMidi } from '../libs/tone'
 
 import { useInfluxDB } from '../contexts/useInfluxDB'
 import { useFieldSelection } from '../contexts/useFieldSelection'
 import { useConsole } from '../contexts/useConsole'
 
-export function useStreaming() {
+export const useStreaming = () => {
   const influxClient = useInfluxDB()
   const { selectedFields, startAgo, measurement, setError } = useFieldSelection()
   const { addConsoleOutput } = useConsole()
   const [isStreaming, setIsStreaming] = useState(false)
+  const [isMidiStreaming, setIsMidiStreaming] = useState(false)
   const stopSignalRef = useRef(false)
+  const stopMidiSignalRef = useRef(false)
 
-  const startStreaming = async () => {
+  // Shared streaming logic for both audio and MIDI streams
+  const startStream = async (
+    setStreamingState: (state: boolean) => void,
+    stopSignal: React.MutableRefObject<boolean>,
+    onRowCallback: (rowsFieldValues: Record<string, number>, row: any) => void,
+    streamType: string
+  ) => {
     try {
       setError(null)
 
@@ -24,30 +32,27 @@ export function useStreaming() {
       }
 
       // Reset stop signal and start streaming
-      stopSignalRef.current = false
-      setIsStreaming(true)
+      stopSignal.current = false
+      setStreamingState(true)
 
-      addConsoleOutput(`Starting stream for ${selectedFields.length} fields: ${selectedFields.join(', ')}`, 'info')
-      console.log(`Streaming ${selectedFields.length} selected fields:`, selectedFields)
+      addConsoleOutput(`Starting ${streamType} stream for ${selectedFields.length} fields: ${selectedFields.join(', ')}`, 'info')
+      console.log(`Streaming ${selectedFields.length} selected fields (${streamType}):`, selectedFields)
 
       const res = await streamFields(influxClient, selectedFields, {
         start: startAgo,
         measurement,
-        onRow: (rowsFieldValues, row) => {
-          console.log(new Date(row._time).toLocaleString(), rowsFieldValues)
-          playInfluxFields(rowsFieldValues)
-        },
-        shouldStop: () => stopSignalRef.current,
+        onRow: onRowCallback,
+        shouldStop: () => stopSignal.current,
       })
 
-      console.log('Stream result:', res)
+      console.log(`${streamType} stream result:`, res)
 
       // Log final summary
-      const wasStopped = stopSignalRef.current
+      const wasStopped = stopSignal.current
       if (wasStopped) {
-        addConsoleOutput(`Stream stopped by user. Processed ${res.totalRows} rows.`, 'info')
+        addConsoleOutput(`${streamType} stream stopped by user. Processed ${res.totalRows} rows.`, 'info')
       } else {
-        addConsoleOutput(`Stream completed. Total rows: ${res.totalRows}`, 'success')
+        addConsoleOutput(`${streamType} stream completed. Total rows: ${res.totalRows}`, 'success')
       }
 
       // Show breakdown by field
@@ -61,18 +66,58 @@ export function useStreaming() {
       setError(errorMsg)
       addConsoleOutput(errorMsg, 'error')
     } finally {
-      setIsStreaming(false)
+      setStreamingState(false)
     }
+  }
+
+  const startStreaming = async () => {
+    await startStream(
+      setIsStreaming,
+      stopSignalRef,
+      (rowsFieldValues, row) => {
+        console.log(new Date(row._time).toLocaleString(), rowsFieldValues)
+        playInfluxFields(rowsFieldValues)
+      },
+      'audio'
+    )
+  }
+
+  const startMidiStreaming = async () => {
+    await startStream(
+      setIsMidiStreaming,
+      stopMidiSignalRef,
+      (rowsFieldValues, row) => {
+        console.log(new Date(row._time).toLocaleString(), rowsFieldValues)
+
+        // Extract first 3 field values for MIDI parameters
+        const values = Object.values(rowsFieldValues)
+        if (values.length >= 3) {
+          const midiNote = values[0]
+          const duration = values[1]
+          const velocity = values[2]
+          playInfluxMidi(midiNote, duration, velocity)
+        }
+      },
+      'MIDI'
+    )
   }
 
   const stopStreaming = () => {
     stopSignalRef.current = true
-    addConsoleOutput('Stopping stream...', 'info')
+    addConsoleOutput('Stopping audio stream...', 'info')
+  }
+
+  const stopMidiStreaming = () => {
+    stopMidiSignalRef.current = true
+    addConsoleOutput('Stopping MIDI stream...', 'info')
   }
 
   return {
     isStreaming,
     startStreaming,
     stopStreaming,
+    isMidiStreaming,
+    startMidiStreaming,
+    stopMidiStreaming,
   }
 }

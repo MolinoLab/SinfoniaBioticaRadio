@@ -9,6 +9,12 @@ export function playTone() {
   synth.triggerAttackRelease('G4', '8n', now + 1)
 }
 
+export function playInfluxMidi(midiNumber, duration, velocity) {
+  const synth = new Tone.Synth().toDestination()
+  const now = Tone.now()
+  synth.triggerAttackRelease(midiNumber, duration, now, velocity)
+}
+
 // Initialize PolySynth for multi-voice playback
 const polySynth = new Tone.PolySynth(Tone.Synth).toDestination()
 polySynth.set({
@@ -16,8 +22,8 @@ polySynth.set({
     attack: 0.05,
     decay: 0.1,
     sustain: 0.3,
-    release: 0.2
-  }
+    release: 0.2,
+  },
 })
 
 // Field mapping configuration for known sensor types
@@ -29,7 +35,7 @@ const FIELD_CONFIG = {
   gas: { min: 0, max: 100000, baseFreq: 440.0 }, // A4
   altitud: { min: 0, max: 2000, baseFreq: 493.88 }, // B4
   infrarrojo: { min: 0, max: 1000, baseFreq: 523.25 }, // C5
-  visible_ir: { min: 0, max: 1000, baseFreq: 587.33 } // D5
+  visible_ir: { min: 0, max: 1000, baseFreq: 587.33 }, // D5
 }
 
 // Fields to exclude from sonification (metadata)
@@ -94,7 +100,7 @@ export function playInfluxFields(fields) {
     const config = FIELD_CONFIG[fieldName] || {
       min: 0,
       max: 100,
-      baseFreq: 220.0 // A3 as default
+      baseFreq: 220.0, // A3 as default
     }
 
     // Normalize value and map to frequency
