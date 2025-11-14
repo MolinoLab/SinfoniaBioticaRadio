@@ -11,6 +11,7 @@ VITE_INFLUX_URL=https://url.influxdata.com
 VITE_INFLUX_TOKEN=YOUR_API_TOKEN
 VITE_INFLUX_ORG=YOUR_ORG
 VITE_INFLUX_BUCKET=YOUR_BUCKET
+VITE_DEVICE_TAG=tag_value # If you want to filter by specific tag
 ```
 
 Then, follow these steps:
@@ -26,6 +27,7 @@ Then, follow these steps:
     ```
 
 To build the project for production, run:
+
    ```bash
    yarn build
    ```
