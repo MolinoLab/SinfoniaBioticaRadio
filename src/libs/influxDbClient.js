@@ -85,6 +85,26 @@ class InfluxDBClient {
   }
 
   /**
+   * Execute a Flux query and return an async iterable
+   * @param {string} fluxQuery - Flux query string
+   * @param {string} [bucket] - Optional bucket override
+   * @returns {AsyncIterable<{values: any, tableMeta: any}>} Async iterable of {values, tableMeta}
+   */
+  async *queryIterateRows(fluxQuery, bucket = null) {
+    const targetBucket = bucket || this.bucket
+    const finalQuery = fluxQuery.replace(/\$bucket/g, `"${targetBucket}"`)
+
+    try {
+      for await (const { values, tableMeta } of this.queryApi.iterateRows(finalQuery)) {
+        yield { values, tableMeta }
+      }
+    } catch (err) {
+      console.error('Query iterate error:', err)
+      throw err
+    }
+  }
+
+  /**
    * Query data from a measurement with filters
    * @param {Object} options - Query options
    * @param {string} options.measurement - Measurement name
