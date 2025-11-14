@@ -131,11 +131,11 @@ export const streamFields = async (influxClient, fields, options = {}) => {
  */
 export const streamIterateRows = async (influxClient, fields, options = {}) => {
   const {
-    start = '-24h',
+    start = '-1h',
     delayMs = 1000,
     onRow,
     shouldStop,
-    measurement = 'midi',
+    measurement = 'environment',
     tagKey = null,
     tagValues = [],
   } = options

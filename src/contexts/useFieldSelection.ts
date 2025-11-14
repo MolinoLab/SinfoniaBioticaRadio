@@ -14,8 +14,8 @@ export const useFieldSelection = () => {
 export const useFieldSelectionProvider = () => {
   const client = useInfluxDB()
 
-  const [startAgo, setStartAgo] = useState('-24h')
-  const [measurement, setMeasurement] = useState('midi')
+  const [startAgo, setStartAgo] = useState('-720h')
+  const [measurement, setMeasurement] = useState()
   const [fieldKeys, setFieldKeys] = useState<string[]>([])
   const [selectedFields, setSelectedFields] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
