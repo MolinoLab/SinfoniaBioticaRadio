@@ -8,7 +8,7 @@ import { useConsole } from '../contexts/useConsole'
 
 export const useStreaming = () => {
   const influxClient = useInfluxDB()
-  const { selectedFields, startAgo, measurement, setError } = useFieldSelection()
+  const { selectedFields, startAgo, measurement, setError, deviceTag, selectedTagValues } = useFieldSelection()
   const { addConsoleOutput } = useConsole()
   const [isStreaming, setIsStreaming] = useState(false)
   const [isMidiStreaming, setIsMidiStreaming] = useState(false)
@@ -35,12 +35,17 @@ export const useStreaming = () => {
       stopSignal.current = false
       setStreamingState(true)
 
-      addConsoleOutput(`Starting ${streamType} stream for ${selectedFields.length} fields: ${selectedFields.join(', ')}`, 'info')
+      addConsoleOutput(
+        `Starting ${streamType} stream for ${selectedFields.length} fields: ${selectedFields.join(', ')}`,
+        'info'
+      )
       console.log(`Streaming ${selectedFields.length} selected fields (${streamType}):`, selectedFields)
 
       const res = await streamFields(influxClient, selectedFields, {
         start: startAgo,
         measurement,
+        tagKey: deviceTag,
+        tagValues: selectedTagValues,
         onRow: onRowCallback,
         shouldStop: () => stopSignal.current,
       })
