@@ -5,6 +5,7 @@ import { TestPanel } from './components/TestPanel'
 import { SchemaExplorer } from './components/SchemaExplorer'
 import { TimeRangeConfig } from './components/TimeRangeConfig'
 import { FieldSelector } from './components/FieldSelector'
+import { DeviceSelector } from './components/DeviceSelector'
 import { ConsoleOutput } from './components/ConsoleOutput'
 import { useFieldSelection } from './contexts/useFieldSelection'
 
@@ -38,6 +39,9 @@ function App() {
         <div className='right-column'>
           {/* Time Range Configuration */}
           <TimeRangeConfig />
+
+          {/* Device Filter Section */}
+          <DeviceSelector />
 
           {/* Field Selection Section */}
           <FieldSelector />

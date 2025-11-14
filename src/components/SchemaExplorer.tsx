@@ -31,12 +31,25 @@ export function SchemaExplorer() {
     }
   }
 
+  const getTagKeys = async () => {
+    try {
+      addConsoleOutput('Fetching tag keys...', 'info')
+      const tags = await influxClient.getTagKeys({ measurement })
+      console.log('getTagKeys:', tags)
+      addConsoleOutput('Tag keys retrieved successfully:', 'success')
+      addConsoleOutput(`Tags: ${tags.join(', ')}`, 'info')
+    } catch (err) {
+      addConsoleOutput(`Failed to get tag keys: ${err instanceof Error ? err.message : String(err)}`, 'error')
+    }
+  }
+
   return (
     <div className='section-container'>
       <div className='section-title'>🔎 Explore influxDb schema</div>
       <div className='button-group'>
         <button onClick={getInfluxSchemaAndTypes}>Get schema and types</button>
         <button onClick={getFieldKeys}>Get field keys</button>
+        <button onClick={getTagKeys}>Get tag keys</button>
       </div>
     </div>
   )

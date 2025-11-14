@@ -4,5 +4,6 @@ interface ImportMeta {
     INFLUX_TOKEN: string
     INFLUX_ORG: string
     INFLUX_BUCKET: string
+    DEVICE_TAG: string
   }
 }

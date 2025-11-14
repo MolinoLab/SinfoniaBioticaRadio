@@ -289,6 +289,60 @@ class InfluxDBClient {
   }
 
   /**
+   * Get tag keys for a measurement
+   * @param {Object} [options] - Query options
+   * @param {string} [options.measurement] - Measurement name, default 'environment'
+   * @returns {Promise<Array>} Array of tag key names
+   */
+  async getTagKeys(options = {}) {
+    const { measurement = 'environment' } = options
+    const tagKeysQuery = `
+    import "influxdata/influxdb/schema"
+    schema.tagKeys(bucket: "${this.bucket}")
+  `
+    const tagKeys = []
+
+    const tags = await this.queryApi.collectRows(tagKeysQuery)
+
+    for (const value of tags) {
+      tagKeys.push(value._value)
+    }
+
+    return tagKeys
+  }
+
+  /**
+   * Get tag values for a specific tag key
+   * @param {Object} options - Query options
+   * @param {string} [options.measurement] - Measurement name, default 'environment'
+   * @param {string} options.tagKey - Tag key name (e.g., 'devices', 'device_id')
+   * @returns {Promise<Array>} Array of tag values
+   */
+  async getTagValues(tagKey) {
+    if (!tagKey) {
+      throw new Error('tagKey is required')
+    }
+
+    const tagValuesQuery = `
+    import "influxdata/influxdb/schema"
+    schema.tagValues(
+      bucket: "${this.bucket}",
+      tag: "${tagKey}"
+    )
+  `
+
+    const tagValues = []
+
+    const values = await this.queryApi.collectRows(tagValuesQuery)
+
+    for (const value of values) {
+      tagValues.push(value._value)
+    }
+
+    return tagValues
+  }
+
+  /**
    * Get all measurements, fields, and inferred data types from an InfluxDB bucket.
    * @param {Object} [options] - Query options
    * @param {string} [options.start] - Start time (e.g., '-1h', '-7d'), default '-7d'

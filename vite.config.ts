@@ -12,10 +12,17 @@ const viteconfig = ({ mode }) => {
   const influxToken = process.env.VITE_INFLUX_TOKEN
   const influxOrg = process.env.VITE_INFLUX_ORG
   const influxBucket = process.env.VITE_INFLUX_BUCKET
+  const deviceTag = process.env.VITE_DEVICE_TAG
 
   if (!influxUrl || !influxToken || !influxOrg || !influxBucket) {
     throw new Error(
       'InfluxDB environment variables are not set properly. Must set VITE_INFLUX_URL, VITE_INFLUX_TOKEN, VITE_INFLUX_ORG, and VITE_INFLUX_BUCKET.'
+    )
+  }
+
+  if (!deviceTag) {
+    throw new Error(
+      'VITE_DEVICE_TAG environment variable is not set. Must specify which tag to use for device filtering.'
     )
   }
 
@@ -25,6 +32,7 @@ const viteconfig = ({ mode }) => {
       'import.meta.env.INFLUX_TOKEN': JSON.stringify(influxToken),
       'import.meta.env.INFLUX_ORG': JSON.stringify(influxOrg),
       'import.meta.env.INFLUX_BUCKET': JSON.stringify(influxBucket),
+      'import.meta.env.DEVICE_TAG': JSON.stringify(deviceTag),
       'import.meta.env.COMMIT': JSON.stringify(commit),
     },
     plugins: [react()],
