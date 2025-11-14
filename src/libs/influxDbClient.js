@@ -382,6 +382,30 @@ class InfluxDBClient {
   }
 
   /**
+   * Get field types for a specific measurement
+   * @param {Object} [options] - Query options
+   * @param {string} [options.measurement] - Measurement name, default 'environmental'
+   * @param {string} [options.start] - Start time (e.g., '-1h', '-7d'), default '-7d'
+   * @returns {Promise<Object>} Field types { [fieldName]: jsType }
+   */
+  async getMeasurementTypes() {
+    const sampleQuery = `
+    import "influxdata/influxdb/schema"
+    schema.measurements(
+      bucket: "${this.bucket}",
+    )`
+
+    const fields = []
+    const rows = await this.queryApi.collectRows(sampleQuery)
+
+    for (const value of rows) {
+      fields.push(value._value)
+    }
+
+    return fields
+  }
+
+  /**
    * Close the client connection
    */
   async close() {

@@ -43,6 +43,18 @@ export function SchemaExplorer() {
     }
   }
 
+  const getMeasurementTypes = async () => {
+    try {
+      addConsoleOutput('Fetching measurement types...', 'info')
+      const types = await influxClient.getMeasurementTypes({ measurement, start: startAgo })
+      console.log('getMeasurementTypes:', types)
+      addConsoleOutput('Measurement types retrieved successfully:', 'success')
+      addConsoleOutput(JSON.stringify(types, null, 2), 'info')
+    } catch (err) {
+      addConsoleOutput(`Failed to get measurement types: ${err instanceof Error ? err.message : String(err)}`, 'error')
+    }
+  }
+
   return (
     <div className='section-container'>
       <div className='section-title'>🔎 Explore influxDb schema</div>
@@ -50,6 +62,7 @@ export function SchemaExplorer() {
         <button onClick={getInfluxSchemaAndTypes}>Get schema and types</button>
         <button onClick={getFieldKeys}>Get field keys</button>
         <button onClick={getTagKeys}>Get tag keys</button>
+        <button onClick={getMeasurementTypes}>Get measurement types</button>
       </div>
     </div>
   )
