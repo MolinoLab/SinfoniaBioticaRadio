@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { streamFields } from '../libs/radio'
+import { streamFields, streamIterateRows } from '../libs/radio'
 import { playInfluxFields, playInfluxMidi } from '../libs/tone'
 
 import { useInfluxDB } from '../contexts/useInfluxDB'
@@ -41,7 +41,7 @@ export const useStreaming = () => {
       )
       console.log(`Streaming ${selectedFields.length} selected fields (${streamType}):`, selectedFields)
 
-      const res = await streamFields(influxClient, selectedFields, {
+      const res = await streamIterateRows(influxClient, selectedFields, {
         start: startAgo,
         measurement,
         tagKey: deviceTag,
