@@ -7,16 +7,49 @@ export function playTone() {
   synth.triggerAttackRelease('C4', '8n', now)
   synth.triggerAttackRelease('E4', '8n', now + 0.5)
   synth.triggerAttackRelease('G4', '8n', now + 1)
+  synth.triggerAttackRelease('B4', '8n', now + 2)
+  synth.triggerAttackRelease('A4', '8n', now + 2.5)
+  synth.triggerAttackRelease('B4', '8n', now + 3)
 }
 
 export function playInfluxMidi(midiNumber, duration, velocity) {
-  const synth = new Tone.Synth().toDestination()
+  // This example works well
   const now = Tone.now()
-  synth.triggerAttackRelease(midiNumber, duration, now, velocity)
+  const lookAhead = 0.1 // 100ms buffer to ensure notes are always scheduled in the future
+
+  polySynth.triggerAttackRelease('C4', '8n', now + lookAhead)
+  polySynth.triggerAttackRelease('E4', '8n', now + lookAhead + 0.5)
+  polySynth.triggerAttackRelease('G4', '8n', now + lookAhead + 1)
+  polySynth.triggerAttackRelease('B4', '8n', now + lookAhead + 2)
+  polySynth.triggerAttackRelease('A4', '8n', now + lookAhead + 2.5)
+  polySynth.triggerAttackRelease('B4', '8n', now + lookAhead + 3)
+
+  // todo(kon): this is what b1tdreamer suggested, but it sounds worse than above
+  // const now = Tone.now()
+  // const lookAhead = 0.1 // 100ms buffer to ensure notes are always scheduled in the future
+  // polySynth.triggerAttackRelease(midiNumber, duration, now + lookAhead, velocity)
+
+  // todo(kon): commented below is added by IA, maybe useful later
+  // Validate MIDI note number (0-127 range)
+  // const validMidiNote = Math.max(0, Math.min(127, midiNumber))
+  //
+  // // Convert MIDI note number to frequency (Hz)
+  // const frequency = Tone.Frequency(validMidiNote, 'midi').toFrequency()
+  //
+  // // Normalize velocity from MIDI range (0-127) to Tone.js range (0-1)
+  // const normalizedVelocity = Math.max(0, Math.min(1, velocity / 127))
+  //
+  // // Ensure duration is valid (use 0.1 seconds as minimum if invalid)
+  // const validDuration = duration && duration > 0 ? duration : 0.1
+
+  // Trigger note on the polyphonic synthesizer
+  // This allows multiple notes to play simultaneously
+  // polySynth.triggerAttackRelease(frequency, validDuration, undefined, normalizedVelocity)
 }
 
 // Initialize PolySynth for multi-voice playback
-const polySynth = new Tone.PolySynth(Tone.Synth).toDestination()
+// maxPolyphony: 12 allows overlapping sequences from streaming data
+const polySynth = new Tone.PolySynth(Tone.Synth, { maxPolyphony: 12 }).toDestination()
 polySynth.set({
   envelope: {
     attack: 0.05,
