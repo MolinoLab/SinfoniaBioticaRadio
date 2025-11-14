@@ -8,7 +8,8 @@ export function RadioPlayer() {
     stopStreaming,
     isMidiStreaming,
     startMidiStreaming,
-    stopMidiStreaming
+    stopMidiStreaming,
+    isMidiPlaying
   } = useStreaming()
   const { selectedFields } = useFieldSelection()
 
@@ -23,10 +24,10 @@ export function RadioPlayer() {
           {isStreaming ? '⏹️ Stop Stream' : '▶️ Stream fields'}
         </button>
         <button
-          onClick={isMidiStreaming ? stopMidiStreaming : startMidiStreaming}
-          disabled={!isMidiStreaming && selectedFields.length === 0}
+          onClick={isMidiStreaming || isMidiPlaying ? stopMidiStreaming : startMidiStreaming}
+          disabled={!isMidiStreaming && !isMidiPlaying && selectedFields.length === 0}
         >
-          {isMidiStreaming ? '⏹️ Stop midi' : '▶️ Stream midi radio'}
+          {isMidiStreaming || isMidiPlaying ? '⏹️ Stop midi' : '▶️ Stream midi radio'}
         </button>
       </div>
     </div>

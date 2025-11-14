@@ -13,9 +13,9 @@ export function TimeRangeConfig() {
           type='text'
           value={measurement}
           onChange={(e) => setMeasurement(e.target.value)}
-          placeholder='environment'
+          placeholder='midi'
         />
-        <div className='input-explanation'>The measurement name to query from InfluxDB. Default: environment</div>
+        <div className='input-explanation'>The measurement name to query from InfluxDB. Default: midi</div>
       </div>
       <div className='input-group'>
         <label htmlFor='start-ago'>Time Range (start for all queries):</label>
@@ -24,7 +24,7 @@ export function TimeRangeConfig() {
           type='text'
           value={startAgo}
           onChange={(e) => setStartAgo(e.target.value)}
-          placeholder='-720h'
+          placeholder='-24h'
         />
         <div className='input-explanation'>
           Specify how far back to query data. Examples: -1h (last hour), -24h (last day), -7d (last week), -30d (last
